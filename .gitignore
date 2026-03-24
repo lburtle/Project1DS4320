@@ -1,3 +1,6 @@
 *.db
 *.parquet
 *.wal
+parquet_exports
+*.txt
+hw8*
