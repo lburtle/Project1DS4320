@@ -1,0 +1,9 @@
+yfinance
+duckdb
+pandas
+pyarrow
+requests
+lxml
+gpytorch
+xgboost
+scikit-learn
