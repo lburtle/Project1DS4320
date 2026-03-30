@@ -1,98 +1,83 @@
-"""
-=============================================================================
-DS 4320 - HW8 Section 8.2: Financial Data Engineering & Forecasting Pipeline
-=============================================================================
-GOAL:    1 GB+ Multi-Table Analytical Database
-STACK:   Python 3.x, DuckDB, yfinance, Parquet
-TABLES:  Companies, PriceHistory, Fundamentals, TechnicalIndicators, StockNews
-=============================================================================
-
-PROVENANCE NOTE:
-    All financial data is sourced in real-time from:
-    - Yahoo Finance via the `yfinance` library (price history, fundamentals, metadata)
-    - Wikipedia S&P 500 constituent list (ticker universe)
-    - Yahoo Finance RSS feeds (news headlines for sentiment analysis)
-    No synthetic or fake data is used. Data is pulled on execution date.
-=============================================================================
-"""
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 1 – Install Dependencies
-# ─────────────────────────────────────────────────────────────────────────────
-# !pip install -q yfinance duckdb pandas pyarrow requests lxml
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 2 – Imports & Configuration
-# ─────────────────────────────────────────────────────────────────────────────
-
 import yfinance as yf
 import duckdb
 import pandas as pd
 import numpy as np
 import requests
+import logging
 import time
 import os
 import gc
 import ctypes
 import xml.etree.ElementTree as ET
 from io import StringIO
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# ── Configuration ──────────────────────────────────────────────────────────────
 DB_PATH       = "stock_data.db"
 PARQUET_DIR   = Path("parquet_exports")
 PARQUET_DIR.mkdir(exist_ok=True)
 
-REQUEST_DELAY = 0.5   # seconds between tickers
-BATCH_SIZE    = 10    # checkpoint every N tickers (not batch accumulation)
-MAX_TICKERS   = 500
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("data.log"),
+        logging.StreamHandler()
+    ]
+)
 
-print(f"[config] DB={DB_PATH}  parquet={PARQUET_DIR}  max_tickers={MAX_TICKERS}")
+REQUEST_DELAY    = 0.4
+CHECKPOINT_EVERY = 10    # WAL checkpoint every N tickers (not batch accumulation)
+MAX_TICKERS      = 500
 
+logging.info(f"[config] DB={DB_PATH}  parquet={PARQUET_DIR}  max_tickers={MAX_TICKERS}")
+
+_news_id_counter = 0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Memory management
+# ──────────────────────────────────────────────────────────────────────────────
 
 def trim_memory():
     """
     Force Python + glibc to release freed memory back to the OS immediately.
 
-    ROOT CAUSE OF 'free(): corrupted unsorted chunks':
-    ──────────────────────────────────────────────────
-    This is a glibc heap allocator crash, not a Python logic error. It fires
-    when large numpy arrays (price history can be 15k rows x 30 float64 cols
-    = ~3.6 MB per ticker) are allocated and freed in a tight loop without
-    ever being returned to the OS. glibc's free-list grows until its internal
-    bookkeeping structures become corrupted.
+    WHY THIS IS NECESSARY:
+    ──────────────────────
+    Python holds freed blocks in per-size-class arenas and does not return them
+    to the OS between loop iterations. Over 500 tickers this causes progressive
+    heap fragmentation. glibc's free-list internal bookkeeping then corrupts,
+    producing the fatal: 'free(): corrupted unsorted chunks'
 
-    The two-part fix:
-    1. gc.collect() twice — catches cyclic garbage Python's ref-counter misses.
-    2. malloc_trim(0) via ctypes — tells glibc to immediately return all free
-       heap pages to the OS. Python's allocator normally holds them for reuse,
-       which is efficient but causes heap fragmentation over 500 tickers.
-
-    On macOS/Windows, malloc_trim doesn't exist; gc.collect() alone is enough
-    because those allocators have different arena management strategies.
+    Two-step fix:
+    1. gc.collect() x2 — two passes handle cyclic garbage ref-counting misses
+       (yfinance Ticker objects can form reference cycles internally).
+    2. malloc_trim(0) via ctypes — instructs glibc to immediately return all
+       free top-of-heap memory to the OS. No-op on macOS/Windows.
     """
     gc.collect()
     gc.collect()
     try:
         ctypes.CDLL("libc.so.6").malloc_trim(0)
     except Exception:
-        pass  # macOS / Windows — gc suffices
+        pass
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 3 – Ticker Universe
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# Ticker universe
+# ──────────────────────────────────────────────────────────────────────────────
 
 def get_sp500_tickers() -> list[str]:
     """
     Fetches S&P 500 tickers from Wikipedia.
 
     Fix history:
-    - v1: pd.read_html(url) → Wikipedia 403 (urllib blocked by Wikimedia CDN)
-    - v2: requests + pd.read_html(resp.text) → FileNotFoundError (newer pandas
-          treats long strings as file paths)
-    - v3 (current): requests + StringIO(resp.text) → works on all pandas 2.x
+    v1: pd.read_html(url) -> Wikipedia 403 (urllib blocked by Wikimedia CDN)
+    v2: requests + pd.read_html(resp.text) -> FileNotFoundError (newer pandas
+        treats long strings as file paths instead of HTML)
+    v3 (current): requests + StringIO(resp.text) -> works on all pandas 2.x
     """
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     headers = {
@@ -110,13 +95,13 @@ def get_sp500_tickers() -> list[str]:
                .str.replace(".", "-", regex=False)
                .dropna().unique().tolist())
     tickers.sort()
-    print(f"[tickers] Loaded {len(tickers)} S&P 500 constituents")
+    logging.info(f"[tickers] Loaded {len(tickers)} S&P 500 constituents from Wikipedia")
     return tickers[:MAX_TICKERS]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 4 – DuckDB Schema
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# Schema
+# ──────────────────────────────────────────────────────────────────────────────
 
 def create_schema(con: duckdb.DuckDBPyConnection) -> None:
     con.execute("""
@@ -143,7 +128,7 @@ def create_schema(con: duckdb.DuckDBPyConnection) -> None:
             high      DOUBLE,
             low       DOUBLE,
             close     DOUBLE,
-            volume    BIGINT,      -- BIGINT: some tickers exceed INT32 max daily volume
+            volume    BIGINT,
             adj_close DOUBLE,
             PRIMARY KEY (symbol, date)
         )
@@ -203,22 +188,18 @@ def create_schema(con: duckdb.DuckDBPyConnection) -> None:
             fetched_at            TIMESTAMP DEFAULT current_timestamp
         )
     """)
-    print("[schema] All tables created / verified.")
+    logging.info("[schema] All tables created / verified.")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 5 – Technical Indicators (pure pandas, Python 3.14 compatible)
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# Technical indicators (pure pandas — Python 3.14 compatible)
+# ──────────────────────────────────────────────────────────────────────────────
 
 def compute_technical_indicators(hist: pd.DataFrame, symbol: str) -> pd.DataFrame:
-    """
-    All indicators computed with pandas .rolling()/.ewm() only.
-    No Numba, no TA-Lib — fully Python 3.14 compatible.
-    """
     if hist.empty or len(hist) < 30:
         return pd.DataFrame()
 
-    # Only copy the columns we actually need — reduces peak memory
+    # Only copy columns we need — reduces peak memory vs hist.copy()
     df = hist[["Open", "High", "Low", "Close", "Volume"]].copy()
     df.index = pd.to_datetime(df.index).normalize()
     df.index.name = "date"
@@ -243,8 +224,7 @@ def compute_technical_indicators(hist: pd.DataFrame, symbol: str) -> pd.DataFram
     df["bb_upper"]  = df["bb_middle"] + 2 * bb_std
     df["bb_lower"]  = df["bb_middle"] - 2 * bb_std
     df["bb_width"]  = (df["bb_upper"] - df["bb_lower"]) / df["bb_middle"]
-    df["bb_pct_b"]  = (df["Close"] - df["bb_lower"]) / (
-                       df["bb_upper"] - df["bb_lower"])
+    df["bb_pct_b"]  = (df["Close"] - df["bb_lower"]) / (df["bb_upper"] - df["bb_lower"])
 
     delta    = df["Close"].diff()
     avg_gain = delta.clip(lower=0).ewm(com=13, adjust=False).mean()
@@ -259,8 +239,7 @@ def compute_technical_indicators(hist: pd.DataFrame, symbol: str) -> pd.DataFram
     hcp = (df["High"] - df["Close"].shift(1)).abs()
     lcp = (df["Low"]  - df["Close"].shift(1)).abs()
     df["atr_14"] = (pd.concat([hl, hcp, lcp], axis=1)
-                    .max(axis=1)
-                    .ewm(com=13, adjust=False).mean())
+                    .max(axis=1).ewm(com=13, adjust=False).mean())
 
     df["hist_vol_20"] = df["log_return"].rolling(20).std() * np.sqrt(252)
 
@@ -283,11 +262,11 @@ def compute_technical_indicators(hist: pd.DataFrame, symbol: str) -> pd.DataFram
     return result
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 6 – Fundamentals (wide → long EAV)
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# Fundamentals (wide -> long EAV)
+# ──────────────────────────────────────────────────────────────────────────────
 
-def extract_fundamentals(tk: yf.Ticker, symbol: str) -> pd.DataFrame:
+def extract_fundamentals(ticker_obj: yf.Ticker, symbol: str) -> pd.DataFrame:
     records = []
 
     def _stack(df, period_type):
@@ -298,37 +277,35 @@ def extract_fundamentals(tk: yf.Ticker, symbol: str) -> pd.DataFrame:
                 if pd.notna(val):
                     records.append({
                         "symbol":      symbol,
-                        "report_date": col.date() if hasattr(col, "date") else col,
+                        "report_date": col.date() if hasattr(col, 'date') else col,
                         "period_type": period_type,
                         "metric":      str(metric),
                         "value":       float(val),
                     })
 
     try:
-        _stack(tk.income_stmt,             "annual")
-        _stack(tk.quarterly_income_stmt,   "quarterly")
-        _stack(tk.balance_sheet,           "annual")
-        _stack(tk.quarterly_balance_sheet, "quarterly")
-        _stack(tk.cash_flow,               "annual")
-        _stack(tk.quarterly_cash_flow,     "quarterly")
+        _stack(ticker_obj.income_stmt,            "annual")
+        _stack(ticker_obj.quarterly_income_stmt,  "quarterly")
+        _stack(ticker_obj.balance_sheet,          "annual")
+        _stack(ticker_obj.quarterly_balance_sheet,"quarterly")
+        _stack(ticker_obj.cash_flow,              "annual")
+        _stack(ticker_obj.quarterly_cash_flow,    "quarterly")
     except Exception as e:
-        print(f"  [fundamentals warning] {symbol}: {e}")
+        logging.warning(f"    [fundamentals] Warning for {symbol}: {e}")
 
     return pd.DataFrame(records) if records else pd.DataFrame()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 7 – News (Yahoo Finance RSS)
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# News (Yahoo Finance RSS)
+# ──────────────────────────────────────────────────────────────────────────────
 
 def fetch_news_rss(symbol: str, max_items: int = 30) -> pd.DataFrame:
-    url = (f"https://feeds.finance.yahoo.com/rss/2.0/headline"
-           f"?s={symbol}&region=US&lang=en-US")
+    url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US"
     records = []
     try:
-        resp = requests.get(
-            url, timeout=8,
-            headers={"User-Agent": "Mozilla/5.0 (research bot)"})
+        resp = requests.get(url, timeout=10,
+                            headers={"User-Agent": "Mozilla/5.0 (research bot)"})
         if resp.status_code != 200:
             return pd.DataFrame()
         root  = ET.fromstring(resp.content)
@@ -343,7 +320,7 @@ def fetch_news_rss(symbol: str, max_items: int = 30) -> pd.DataFrame:
                 "symbol":                symbol,
                 "title":                 item.findtext("title", "").strip(),
                 "publisher":             item.findtext("source", "Yahoo Finance"),
-                "link":                  item.findtext("link", "").strip(),
+                "link":                  item.findtext("link",  "").strip(),
                 "provider_publish_time": pt,
                 "news_type":             "RSS",
             })
@@ -352,24 +329,23 @@ def fetch_news_rss(symbol: str, max_items: int = 30) -> pd.DataFrame:
     return pd.DataFrame(records) if records else pd.DataFrame()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 8 – Per-ticker flush (write immediately, release immediately)
-# ─────────────────────────────────────────────────────────────────────────────
-
-_news_id_counter = 0
-
+# ──────────────────────────────────────────────────────────────────────────────
+# Per-ticker flush — THE KEY FIX
+# ──────────────────────────────────────────────────────────────────────────────
 
 def flush_ticker(con, co_row, ph_df, ti_df, fu_df, sn_df):
     """
-    Writes one ticker's data to DuckDB and returns immediately.
+    Writes one ticker's data to DuckDB immediately.
 
-    KEY DESIGN DECISION — per-ticker vs. batch flush:
-    ─────────────────────────────────────────────────
-    The original design accumulated 50 tickers in Python lists before writing.
-    That kept ~270 MB of numpy arrays alive simultaneously, which corrupted
-    glibc's heap free-list. Writing per-ticker limits peak live allocations to
-    one ticker's worth of data (~5-20 MB), eliminating the crash entirely.
-    DuckDB buffers writes in its WAL anyway, so there is no I/O amplification.
+    WHY PER-TICKER (not batch):
+    ───────────────────────────
+    Old design: accumulate 50 tickers in lists -> pd.concat -> write.
+    Peak RAM: 50 x ~5 MB = ~250 MB of live numpy arrays simultaneously.
+    Result: glibc heap free-list corruption -> 'free(): corrupted unsorted chunks'
+
+    New design: write immediately after each ticker, del all refs, malloc_trim.
+    Peak RAM: 1 x ~5 MB. DuckDB WAL absorbs the extra write frequency at zero
+    I/O cost since it buffers internally until CHECKPOINT is called.
     """
     global _news_id_counter
 
@@ -456,25 +432,26 @@ def flush_ticker(con, co_row, ph_df, ti_df, fu_df, sn_df):
         """)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CELL 9 – Main Pipeline
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# Main pipeline
+# ──────────────────────────────────────────────────────────────────────────────
 
 def run_pipeline():
     tickers = get_sp500_tickers()
     con     = duckdb.connect(DB_PATH)
     con.execute("PRAGMA threads=4")
 
-    # Clean slate (remove these DROP lines to resume a partial run instead)
-    for t in ["Companies", "PriceHistory", "Fundamentals",
-              "TechnicalIndicators", "StockNews"]:
-        con.execute(f"DROP TABLE IF EXISTS {t}")
+    # Clean slate — remove DROP lines to resume a partial run instead
+    for table in ["Companies", "PriceHistory", "Fundamentals",
+                  "TechnicalIndicators", "StockNews"]:
+        con.execute(f"DROP TABLE IF EXISTS {table}")
+
     create_schema(con)
 
     for i, symbol in enumerate(tickers):
-        print(f"[{i+1:>4}/{len(tickers)}] {symbol}", end=" ... ", flush=True)
+        logging.info(f"[{i+1:>4}/{len(tickers)}] {symbol}")
 
-        # Declare all vars up front so `finally` block can always del them
+        # Declare all vars up front so finally block can always del them
         tk = info = hist = co_row = ph_df = ti_df = fu_df = sn_df = None
 
         try:
@@ -511,11 +488,12 @@ def run_pipeline():
                 })[["symbol", "date", "open", "high", "low",
                     "close", "volume", "adj_close"]]
 
+                # Compute indicators before deleting hist
                 ti_df = compute_technical_indicators(hist, symbol)
                 if ti_df is not None and ti_df.empty:
                     ti_df = None
 
-            # Free the largest object before fetching fundamentals
+            # Free largest object before fundamentals fetch
             del hist
             hist = None
             info = None
@@ -527,46 +505,50 @@ def run_pipeline():
             del tk
             tk = None
 
-            sn_df = fetch_news_rss(symbol)
+            sn_df = fetch_news_rss(symbol, max_items=30)
             if sn_df is not None and sn_df.empty:
                 sn_df = None
 
+            # Write immediately — no accumulation
             flush_ticker(con, co_row, ph_df, ti_df, fu_df, sn_df)
-            print("✓")
+            logging.info("Success")
 
         except Exception as e:
-            print(f"✗  [{type(e).__name__}] {e}")
+            logging.error(f"Error: [{type(e).__name__}] {e}")
 
         finally:
-            # Unconditionally release every object — even on exception paths
+            # Release every object — even on exception paths
             del tk, info, hist, co_row, ph_df, ti_df, fu_df, sn_df
-            trim_memory()   # gc.collect() × 2 + malloc_trim(0)
+            trim_memory()   # gc x2 + malloc_trim(0)
 
         time.sleep(REQUEST_DELAY)
 
-        # Checkpoint WAL to main file every BATCH_SIZE tickers
-        if (i + 1) % BATCH_SIZE == 0:
+        # Checkpoint WAL to main DB file every N tickers
+        if (i + 1) % CHECKPOINT_EVERY == 0:
             con.execute("CHECKPOINT")
-            db_mb  = os.path.getsize(DB_PATH) / 1e6
-            wal_mb = (os.path.getsize(DB_PATH + ".wal")
-                      if os.path.exists(DB_PATH + ".wal") else 0) / 1e6
-            print(f"\n  ── checkpoint [{i+1}/{len(tickers)}] "
-                  f"db={db_mb:.0f} MB  wal={wal_mb:.0f} MB ──\n")
+            db_sz  = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+            wal_sz = (os.path.getsize(DB_PATH + ".wal")
+                      if os.path.exists(DB_PATH + ".wal") else 0)
+            logging.info(
+                f"    [checkpoint {i+1}/{len(tickers)}] "
+                f"DB={db_sz/1e6:.1f} MB  WAL={wal_sz/1e6:.1f} MB"
+            )
 
     con.execute("CHECKPOINT")
 
-    # ── Parquet export ─────────────────────────────────────────────────────
-    print("\n[export] Writing Parquet files ...")
+    # Export to Parquet
+    logging.info("\n[export] Writing Parquet files via DuckDB COPY engine ...")
     for table in ["Companies", "PriceHistory", "Fundamentals",
                   "TechnicalIndicators", "StockNews"]:
         out = PARQUET_DIR / f"{table}.parquet"
         con.execute(f"COPY {table} TO '{out}' (FORMAT PARQUET, COMPRESSION ZSTD)")
-        print(f"  → {out}  ({out.stat().st_size / 1e6:.1f} MB)")
+        logging.info(f"  -> {out}  ({out.stat().st_size / 1e6:.1f} MB)")
 
-    # ── Verification ───────────────────────────────────────────────────────
-    print("\n══════════════════════════════════════════")
-    print("  VERIFICATION QUERIES")
-    print("══════════════════════════════════════════")
+    # Verification queries
+    logging.info("\n" + "="*50)
+    logging.info("  VERIFICATION QUERIES")
+    logging.info("="*50)
+
     queries = {
         "Row counts": """
             SELECT 'PriceHistory'        AS tbl, COUNT(*) AS rows FROM PriceHistory UNION ALL
@@ -575,26 +557,24 @@ def run_pipeline():
             SELECT 'StockNews'           AS tbl, COUNT(*) AS rows FROM StockNews UNION ALL
             SELECT 'Companies'           AS tbl, COUNT(*) AS rows FROM Companies
         """,
-        "Date range": "SELECT MIN(date) AS earliest, MAX(date) AS latest FROM PriceHistory",
+        "Date range":
+            "SELECT MIN(date) AS earliest, MAX(date) AS latest FROM PriceHistory",
         "Max volume (INT32 overflow check)": """
             SELECT symbol, MAX(volume) AS max_vol
             FROM PriceHistory GROUP BY symbol ORDER BY max_vol DESC LIMIT 5
         """,
-        "AAPL indicators (latest 5)": """
-            SELECT * FROM TechnicalIndicators WHERE symbol='AAPL'
-            ORDER BY date DESC LIMIT 5
-        """,
-        "Sector distribution": """
-            SELECT sector, COUNT(*) AS n FROM Companies
-            WHERE sector IS NOT NULL GROUP BY sector ORDER BY n DESC
-        """,
+        "AAPL TechnicalIndicators sample":
+            "SELECT * FROM TechnicalIndicators WHERE symbol='AAPL' LIMIT 5",
+        "Sector distribution":
+            "SELECT sector, COUNT(*) AS n FROM Companies GROUP BY sector ORDER BY n DESC",
     }
+
     for label, sql in queries.items():
-        print(f"\n── {label}")
-        print(con.execute(sql).df().to_string(index=False))
+        logging.info(f"\n-- {label}")
+        logging.info("\n" + con.execute(sql).df().to_string(index=False))
 
     db_mb = os.path.getsize(DB_PATH) / 1e6
-    print(f"\n[done] stock_data.db = {db_mb:.1f} MB")
+    logging.info(f"\n[done] stock_data.db size: {db_mb:.1f} MB")
     con.close()
 
 
