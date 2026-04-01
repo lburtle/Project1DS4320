@@ -193,8 +193,7 @@ def build_sentiment_map(con: duckdb.DuckDBPyConnection,
     if news_df.empty:
         return {}
 
-    # Keyword-based proxy sentiment (no GPU required for pipeline demo)
-    # Replace with actual FinBERT scores if you run sentimenttool.py first
+    # Keyword-based proxy sentiment (no GPU required)
     positive_words = {
         "beat", "beats", "record", "growth", "profit", "surge", "rally",
         "upgrade", "bullish", "strong", "revenue", "gain", "rises", "up",
