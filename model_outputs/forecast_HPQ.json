@@ -1,175 +1,175 @@
 {
   "symbol": "HPQ",
-  "last_close": 19.32,
+  "last_close": 19.05,
   "signal": 1,
-  "xgb_rmse": 0.021492,
-  "combined_rmse": 0.021492,
-  "gp_improvement": 0.0,
-  "ci_coverage_pct": 97.53,
-  "n_train": 12773,
+  "xgb_rmse": 0.021482,
+  "combined_rmse": 0.021477,
+  "gp_improvement": 5e-06,
+  "ci_coverage_pct": 97.21,
+  "n_train": 12775,
   "n_test": 3194,
   "forecast": [
     {
-      "date": "2026-03-30",
-      "mean_close": 19.3144,
-      "lower_bound": 18.2979,
-      "upper_bound": 20.3874,
-      "std_return": 0.027033,
-      "mean_return": -0.000287
-    },
-    {
       "date": "2026-03-31",
-      "mean_close": 19.3095,
-      "lower_bound": 17.8881,
-      "upper_bound": 20.8438,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 19.0353,
+      "lower_bound": 18.0741,
+      "upper_bound": 20.0477,
+      "std_return": 0.025909,
+      "mean_return": -0.00077
     },
     {
       "date": "2026-04-01",
-      "mean_close": 19.3046,
-      "lower_bound": 17.5789,
-      "upper_bound": 21.1997,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 19.0159,
+      "lower_bound": 17.6722,
+      "upper_bound": 20.4618,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-02",
-      "mean_close": 19.2997,
-      "lower_bound": 17.3217,
-      "upper_bound": 21.5036,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.9965,
+      "lower_bound": 17.3658,
+      "upper_bound": 20.7803,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-03",
-      "mean_close": 19.2947,
-      "lower_bound": 17.0976,
-      "upper_bound": 21.7742,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.9771,
+      "lower_bound": 17.1089,
+      "upper_bound": 21.0494,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-06",
-      "mean_close": 19.2898,
-      "lower_bound": 16.8972,
-      "upper_bound": 22.0213,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.9578,
+      "lower_bound": 16.8837,
+      "upper_bound": 21.2867,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-07",
-      "mean_close": 19.2849,
-      "lower_bound": 16.7145,
-      "upper_bound": 22.2505,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.9384,
+      "lower_bound": 16.6809,
+      "upper_bound": 21.5015,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-08",
-      "mean_close": 19.28,
-      "lower_bound": 16.5461,
-      "upper_bound": 22.4657,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.9191,
+      "lower_bound": 16.4953,
+      "upper_bound": 21.6991,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-09",
-      "mean_close": 19.2751,
-      "lower_bound": 16.3891,
-      "upper_bound": 22.6692,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.8998,
+      "lower_bound": 16.3232,
+      "upper_bound": 21.8831,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-10",
-      "mean_close": 19.2702,
-      "lower_bound": 16.2418,
-      "upper_bound": 22.8632,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.8806,
+      "lower_bound": 16.1623,
+      "upper_bound": 22.056,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-13",
-      "mean_close": 19.2652,
-      "lower_bound": 16.1027,
-      "upper_bound": 23.0489,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.8613,
+      "lower_bound": 16.0106,
+      "upper_bound": 22.2196,
+      "std_return": 0.025909,
+      "mean_return": -0.001021
     },
     {
       "date": "2026-04-14",
-      "mean_close": 19.2603,
-      "lower_bound": 15.9708,
-      "upper_bound": 23.2275,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.8421,
+      "lower_bound": 15.8668,
+      "upper_bound": 22.3752,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-15",
-      "mean_close": 19.2554,
-      "lower_bound": 15.8451,
-      "upper_bound": 23.3998,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.8228,
+      "lower_bound": 15.73,
+      "upper_bound": 22.5238,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-16",
-      "mean_close": 19.2505,
-      "lower_bound": 15.7249,
-      "upper_bound": 23.5666,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.8036,
+      "lower_bound": 15.5992,
+      "upper_bound": 22.6664,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-17",
-      "mean_close": 19.2456,
-      "lower_bound": 15.6096,
-      "upper_bound": 23.7285,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.7845,
+      "lower_bound": 15.4737,
+      "upper_bound": 22.8035,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-20",
-      "mean_close": 19.2407,
-      "lower_bound": 15.4989,
-      "upper_bound": 23.8859,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.7653,
+      "lower_bound": 15.3531,
+      "upper_bound": 22.9358,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-21",
-      "mean_close": 19.2358,
-      "lower_bound": 15.3921,
-      "upper_bound": 24.0393,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.7462,
+      "lower_bound": 15.2369,
+      "upper_bound": 23.0637,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-22",
-      "mean_close": 19.2309,
-      "lower_bound": 15.2891,
-      "upper_bound": 24.189,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.727,
+      "lower_bound": 15.1245,
+      "upper_bound": 23.1877,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-23",
-      "mean_close": 19.226,
-      "lower_bound": 15.1894,
-      "upper_bound": 24.3353,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.708,
+      "lower_bound": 15.0158,
+      "upper_bound": 23.3079,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     },
     {
       "date": "2026-04-24",
-      "mean_close": 19.2211,
-      "lower_bound": 15.0928,
-      "upper_bound": 24.4785,
-      "std_return": 0.027033,
-      "mean_return": -0.000255
+      "mean_close": 18.6889,
+      "lower_bound": 14.9104,
+      "upper_bound": 23.4249,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
+    },
+    {
+      "date": "2026-04-27",
+      "mean_close": 18.6698,
+      "lower_bound": 14.8081,
+      "upper_bound": 23.5387,
+      "std_return": 0.025909,
+      "mean_return": -0.00102
     }
   ],
   "sentiment_available": true,
-  "fetched_at": "2026-03-30T00:25:43.455299"
+  "fetched_at": "2026-03-31T23:18:02.836673"
 }
