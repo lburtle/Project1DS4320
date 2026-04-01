@@ -1,9 +1,62 @@
 # DS 4320 Project 1: Stock Market Probabilistic Forecasting Model
+#### Landon Burtle (xfd3tf)
 
+### Executive Summary
+
+### Data
+
+### Pipeline
+
+### Press Release
+
+### License
+
+-------------------
 ## Problem Definition
+
+### Initial General Problem
+Can we predict the price of a stock?
+### Refined Problem Statement
+Can we forecast where a stock closing price is moving with a degree of confidence?
+### Rationale
+"Predicting the price of a stock" is very vague as there are multiple values which that could represent. We could consider the opening price, closing price, price during the day while its being traded, or maybe even relative change. Because of this, I choose to simply forecast the closing price since this allows a trader/investor to inform their decisions on where the value will be at the end of the trading day, or at some future date. Forecasting the price throughout the day is only of interest to traders who trade throughout the day, but that is a smaller base of interest so instead we can just appeal to longer-term investors. Another important factor to investors when it comes to machine-informed decisions is uncertainty. If we can express how certain a model is in its predictions, we can more thoroughly evaluate whether it is valuable or not.
+### Motivation
+Unlike the previous problem, this is not a data problem. There is a lot of collected data every day and every minute from the stock market, available on many APIs. The reason this is an intriguing problem is because it requires harnessing data with lots of inherent noise, making it difficult to read, and require some method to finding the underlying trend. On the other hand, it is very interesting to investors who want to have some verified successful method to reading the market and making profits off of it.
+### Headline
+Probabilistic Approach to Forecasting Stock Prices allows for Better Insights [Link](Change_This)
 
 --------------------
 ## Domain Exposition
+
+### Terminology:
+
+#### KPI/Jargon:
+| Term | Definition |
+| --- | --- |
+| Returns (KPI) | Amount made back on investments |
+| Profit (KPI) | Net gain on investments |
+| YTD | Year-to-date |
+| Indicator | Calculated feature for finding the signal in a stock |
+| RSI | Relative Strength Index. Indicator for stocks. |
+| MACD | Moving Average Convergence Divergence. Another indicator which measures the strength of a trend |
+| Signal | Underlying true trend of the data |
+| ML | Machine Learning |
+| DL | Deep Learning |
+
+### Domain:
+This project lives in the domain of Quantitative Investment and Machine Learning, as well as general Finance and Economics. Much of the important topics for understanding include an understanding of markets and market dynamics as well as data and knowing the difference between signal and noise. Being able to engineer valuable indicator features is also a data skill which is valued in the domain.
+
+### Background Reading:
+
+| Article | Summary | Link |
+| --- | --- | --- |
+| Efficient Market Hypothesis | Describes how in theory it is impossible to predict the market in the scenario that the market is always perfectly priced, so there is no margin to gain. | [Efficient Market](https://drive.google.com/file/d/1wPENRU4HO7Im4GskrUa2NVkDwodG0BTk/view?usp=sharing) |
+| Oscillators: MACD, RSI, Stochastics | Explores the surface level of technical indicators which detect the strength of a trend to determine if a market is over-bought or over-sold | [Oscillators](https://drive.google.com/file/d/1GCqNkxv06inuFfWi-cFaDv5br3gV6GnW/view?usp=sharing) |
+| Stock Market Prediction Using Machine Learning and Deep Learning Techniques: A Review | A deeper dive on machine learning techniques that have been used for stock market prediction such as LSTMs, CNNs and SVMs. | [MLDL](https://drive.google.com/file/d/1qnITIEKcQIXsNt7Y3DlppfE6lEd-b4OK/view?usp=sharing) |
+| Stock Price Prediction in the Financial Market Using Machine Learning Models | Another exploration of the applications of ML models for stock price prediction, specifically regarding time series data, such as with RNNs, LSTMs, GRU, CNNs, and XGBoost | [ML](https://drive.google.com/file/d/1iDBPMujGTRJcV5POJ1EKliOCa2YetyfW/view?usp=sharing) |
+| Uncertainty in time series forecasting | Discusses randomness and uncertainty as key features of the data, requiring degrees of confidence and Bayesian methods for better capturing the data | [Uncertainty](https://drive.google.com/file/d/1Hc1d3PzOdhoIosIhWQNyNzLSw0cYXAXo/view?usp=sharing) |
+
+Folder link: [Complete Folder](https://drive.google.com/drive/folders/1GtwGSTOvyQ1R31vCpp-Y5rtdQj4u8XeA?usp=drive_link)
 
 ----------------------
 ## Data Creation
@@ -40,3 +93,110 @@ ticker symbols while the S&P 500 official list uses dots.
 ---------------------
 ## Metadata
 
+<img src="images/projectERD.PNG" width="75%"/>
+
+### Data:
+| Table | Description | CSV / Parquet |
+|-------|-------------|---------------|
+| `Companies` | One row per ticker — name, sector, industry, market cap, long business summary text | [Companies.parquet](Change_this) |
+| `PriceHistory` | Daily OHLCV records from IPO date to present, one row per (symbol, date) | [PriceHistory.parquet](Change_this) |
+| `Fundamentals` | Long-format financial statement metrics — income, balance sheet, cash flow; annual and quarterly | [Fundamentals.parquet](Change_this) |
+| `TechnicalIndicators` | 20+ engineered features per (symbol, date): SMAs, EMAs, MACD, RSI, Bollinger Bands, ATR, volatility | [TechnicalIndicators.parquet](Change_this) |
+| `StockNews` | Real news headlines from Yahoo Finance RSS: title, publisher, link, publish timestamp | [StockNews.parquet](Change_this) |
+
+
+### Data Dictionary:
+#### Companies
+| Feature | Type | Description | Example |
+|---------|------|-------------|--------|
+| symbol | VARCHAR (PK) | Ticker symbol as used on Yahoo Finance | `AAPL` |
+| short_name | VARCHAR | Abbreviated company name | `Apple Inc.` |
+| long_name | VARCHAR | Full legal company name | `Apple Inc.` |
+| sector | VARCHAR | GICS sector classification | `Technology` |
+| industry | VARCHAR | GICS industry sub-classification | `Consumer Electronics` |
+| country | VARCHAR | Country of incorporation | `United States` |
+| exchange | VARCHAR | Primary listing exchange | `NMS` |
+| market_cap | BIGINT | Total market capitalisation in USD | `2950000000000` |
+| full_time_employees | INTEGER | Number of full-time staff | `150000` |
+| website | VARCHAR | Corporate website URL | `https://www.apple.com` |
+| long_business_summary | TEXT | Multi-paragraph business description (intentionally large) | `Apple Inc. designs, manufactures...` |
+| fetched_at | TIMESTAMP | UTC timestamp of data retrieval | `2026-03-23 14:30:00` |
+
+#### PriceHistory
+| Feature | Type | Description | Example |
+|---------|------|-------------|--------|
+| symbol | VARCHAR (PK) | Ticker symbol | `AAPL` |
+| date | DATE (PK) | Trading date | `2024-01-15` |
+| open | DOUBLE | Opening price (adjusted) | `185.23` |
+| high | DOUBLE | Intraday high (adjusted) | `186.90` |
+| low | DOUBLE | Intraday low (adjusted) | `184.10` |
+| close | DOUBLE | Closing price (adjusted) | `186.40` |
+| volume | BIGINT | Shares traded (INT64 to avoid overflow) | `58432100` |
+| adj_close | DOUBLE | Dividend and split-adjusted close | `186.40` |
+
+#### Fundamentals
+| Feature | Type | Description | Example |
+|---------|------|-------------|--------|
+| symbol | VARCHAR (PK) | Ticker symbol | `AAPL` |
+| report_date | DATE (PK) | End date of the reporting period | `2024-09-28` |
+| period_type | VARCHAR (PK) | Reporting frequency | `annual` or `quarterly` |
+| metric | VARCHAR (PK) | Financial metric name from Yahoo Finance | `TotalRevenue` |
+| value | DOUBLE | Reported value in USD | `391035000000.0` |
+
+#### TechnicalIndicators
+| Feature | Type | Description | Example |
+|---------|------|-------------|--------|
+| symbol | VARCHAR (PK) | Ticker symbol | `AAPL` |
+| date | DATE (PK) | Trading date | `2024-01-15` |
+| close | DOUBLE | Adjusted closing price | `186.40` |
+| daily_return | DOUBLE | Simple daily return `(close/close_prev) - 1` | `0.00612` |
+| log_return | DOUBLE | Natural log return `ln(close/close_prev)` | `0.00610` |
+| cumulative_return | DOUBLE | Compounded return since first available date | `1.8342` |
+| sma_5 | DOUBLE | 5-day simple moving average | `185.80` |
+| sma_10 | DOUBLE | 10-day simple moving average | `184.20` |
+| sma_20 | DOUBLE | 20-day simple moving average | `183.50` |
+| sma_50 | DOUBLE | 50-day simple moving average | `180.10` |
+| sma_200 | DOUBLE | 200-day simple moving average | `175.60` |
+| ema_12 | DOUBLE | 12-day exponential moving average | `185.10` |
+| ema_26 | DOUBLE | 26-day exponential moving average | `183.40` |
+| ema_50 | DOUBLE | 50-day exponential moving average | `181.20` |
+| macd | DOUBLE | MACD line `ema_12 - ema_26` | `1.70` |
+| macd_signal | DOUBLE | 9-day EMA of MACD | `1.45` |
+| macd_histogram | DOUBLE | `macd - macd_signal` | `0.25` |
+| bb_upper | DOUBLE | Bollinger Band upper (20-day SMA + 2σ) | `190.20` |
+| bb_middle | DOUBLE | Bollinger Band middle (20-day SMA) | `183.50` |
+| bb_lower | DOUBLE | Bollinger Band lower (20-day SMA − 2σ) | `176.80` |
+| bb_width | DOUBLE | Band width `(upper-lower)/middle` | `0.073` |
+| bb_pct_b | DOUBLE | %B position `(close-lower)/(upper-lower)` | `0.71` |
+| rsi_14 | DOUBLE | 14-day RSI (Wilder smoothing via ewm) | `63.4` |
+| volume | BIGINT | Raw share volume (BIGINT) | `58432100` |
+| volume_sma_20 | DOUBLE | 20-day average volume | `62100000.0` |
+| volume_ratio | DOUBLE | `volume / volume_sma_20` | `0.941` |
+| atr_14 | DOUBLE | 14-day Average True Range | `3.12` |
+| hist_vol_20 | DOUBLE | 20-day historical volatility, annualised | `0.182` |
+
+#### StockNews
+| Feature | Type | Description | Example |
+|---------|------|-------------|--------|
+| id | INTEGER (PK) | Auto-incrementing row identifier | `1042` |
+| symbol | VARCHAR | Ticker symbol the news was fetched for | `AAPL` |
+| title | VARCHAR | Headline text from RSS feed | `Apple Reports Record Q1 Revenue` |
+| publisher | VARCHAR | News source name | `Reuters` |
+| link | VARCHAR | URL to full article | `https://finance.yahoo.com/...` |
+| provider_publish_time | TIMESTAMP | UTC publication timestamp | `2026-03-20 13:45:00` |
+| news_type | VARCHAR | Feed source type | `RSS` |
+| fetched_at | TIMESTAMP | UTC timestamp of RSS retrieval | `2026-03-23 14:30:00` |
+
+
+### Uncertainty Analysis:
+
+----------------------
+## Problem Solution Pipeline
+
+### Files
+Jupyter Notebook: **`problemsolution.ipynb`** [Here](problem_solution.ipynb)
+Markdown Version **`problemsolution.md`** [Here](problem_solution.md)
+
+### Analysis Rationale
+
+### Results Visualizations
