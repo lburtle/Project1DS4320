@@ -3,7 +3,7 @@
 #### Landon Burtle (xfd3tf)
 #### License - [MIT](LICENSE)
 #### Press Release - [Stop Guessing, Start Understanding: A Smarter Way to Read the Stock Market](PRESSRELEASE.md)
-#### DOI -
+#### DOI - [![DOI](https://zenodo.org/badge/1189077529.svg)](https://doi.org/10.5281/zenodo.19364787)
 
 ### Executive Summary
 
