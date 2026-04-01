@@ -1,7 +1,9 @@
 # DS 4320 Project 1: Stock Market Probabilistic Forecasting Model
-#### Landon Burtle (xfd3tf)
 
+#### Landon Burtle (xfd3tf)
 #### License - [MIT](LICENSE)
+#### Press Release - [Stop Guessing, Start Understanding: A Smarter Way to Read the Stock Market](PRESSRELEASE.md)
+#### DOI -
 
 ### Executive Summary
 
@@ -64,11 +66,6 @@ scripts
 └── visualize.py
 ```
 Compiled and ran in [problemsolution.ipynb](problemsolution.ipynb)
-
-
-### Press Release
-
-### License
 
 -------------------
 ## Problem Definition
@@ -249,6 +246,21 @@ ticker symbols while the S&P 500 official list uses dots.
 
 ### Uncertainty Analysis:
 
+| Feature | Metric | Value | Feasible |
+| --- | --- | --- | --- |
+| close / adj_close | Mean % rounding error (close vs adj_close) | 0.0000% | Yes |
+| close | NULL rate | 0.00% | Yes |
+| volume | Rows that would corrupt INT32 | 106 rows across 4 tickers | Yes |
+| sma_200 |  NULL warm-up rows (% of total) | 2.29% | Yes |
+| rsi_14 | Mean abs(EWM − Wilder) deviation | 0.0393 pts  (max 26.5879)  (AAPL) | Yes |
+| rsi_14 | % rows within 0.5 pt of true Wilder RSI | 99.5% | Yes |
+| bb_pct_b | Division-by-zero NULL rate (post warm-up) | 0.119392% | Yes |
+| hist_vol_20 | Median / P95 / % rows > 1.0 | 0.2531 / 0.666 / 1.41% | Yes |
+| full_time_employees | NULL rate (not disclosed by all companies) | 1.4% | Yes |
+| value (Fundamentals) | GAAP vs. non-GAAP divergence | Requires Compustat / external benchmark | No — external data needed |
+| market_cap | Intraday staleness (seconds since fetch) | Requires intraday tick feed | No — external data needed |
+
+
 ----------------------
 ## Problem Solution Pipeline
 
@@ -258,4 +270,20 @@ Markdown Version **`problemsolution.md`** [Here](problem_solution.md)
 
 ### Analysis Rationale
 
+In my analysis, the first main consideration/choice that I made was in regard to the necessity to quantify uncertainty. In order to do that,
+I included a Gaussian Process (GP) to generate uncertainty bands / distributions, which then enable for iterative forecasting from the last distribution.
+Next, to include an ML method from our past DS ML courses, I included an XGBoost model, which also served as an initial layer for analyzing the raw data and producing a residual for the GP to work off of. I also made the GP a Sparse GP, which allows for a set number of inducing points, or points where the model
+builds the distributions off of, which saved computation costs, as running it in a notebook takes several hours on my local machine.
+Finally, because of this, I also did not include a sentiment analysis model, like FinBERT, since it would have to analyze news articles for 500 stock tickers, which 
+would be tedious enough, on top of the hours of model training. Instead I chose to just implement a crude sentiment score assignment so that it 
+could be quickly calculated for each article.
+
 ### Results Visualizations
+
+For the visualizations, the main choice I made was with the individual stock ticker forecast visualizations. These showed the stock history of the stock along with
+some technical indicators, such as Bollinger Bands to show the standard deviations away from the mean, Simple Moving Averages (SMA) and the actual close price. 
+After the historical data, it then shows where it begins to forecast and generate a distribution of values for the prediction, and this forms a cone as the uncertainty compounds. This is an explicit detail to convey to anyone how the model expresses its uncertainty.
+
+Example:
+
+<img src="plots/ticker_JNJ.png" width="75%"/>
