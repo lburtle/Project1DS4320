@@ -1,6 +1,8 @@
 # DS 4320 Project 1: Stock Market Probabilistic Forecasting Model
 #### Landon Burtle (xfd3tf)
 
+#### License - [MIT](LICENSE)
+
 ### Executive Summary
 
 Basic Machine Learning models geared towards forecasting stock market prices tend to fail or not be useful due to a number of reasons. 
