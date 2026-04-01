@@ -3,6 +3,19 @@
 
 ### Executive Summary
 
+Basic Machine Learning models geared towards forecasting stock market prices tend to fail or not be useful due to a number of reasons. 
+One of those reasons that this project is focused on is the importance in quantifying uncertainty, as well as solely utilizing numerical data.
+
+My project aims to implement these missing features to better understand when the model does or does not know confidently where the stock price is moving.
+To implement this, I pulled data from Yahoo Finance's API, ```yfinance```, which included information on the companies as well as their stock metrics, alongside
+news articles from the Yahoo Finance page for current event sentiment analysis. To avoid overcomplicating and save compute time, I opted to use a proxy for a sentiment map rather than implementing a tool such as FinBERT. These scores were attached to the stock data and fed into an XGBoost model to build residual fits, then into a Sparse Variational Gaussian Process (SVGP) model to fit the data and quantify uncertainty. This allowed for taking the posterior and sampling for future forecasts.
+
+This solution effectively targets multiple aspects that are missing in basic ML applications for stock market forecasting. It has not been backtested
+for training strategy effectiveness, but most importantly it does learn to build cones of uncertainty to predict future prices, incorporating the 
+non-numerical data of sentiment in a numerical manner. 
+
+This repository contains the scripts that were used for building the pipeline, contained in **`scripts/`**, which is assembled in `problemsolution.ipynb`. The results are visualized in the **`plots/`** folder. The **`images`** folder contains any extraneous media, which is just the `projectERD.png` displayed below.
+
 ### Data
 
 Data folder: [OneDrive Link](https://myuva-my.sharepoint.com/:f:/g/personal/xfd3tf_virginia_edu/IgAnw5dHMOZ-RoqYzN135Y2bASnRxuDLPszFfxa-YQXSFms?e=cSlCmL)
@@ -41,6 +54,15 @@ Repo Structure
 ```
 
 ### Pipeline
+Built with the files [data.py](scripts/data.py), [model.py](scripts/model.py), and [visualize.py](scripts/visualize.py)
+```
+scripts
+├── data.py
+├── model.py
+└── visualize.py
+```
+Compiled and ran in [problemsolution.ipynb](problemsolution.ipynb)
+
 
 ### Press Release
 
