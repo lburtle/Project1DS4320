@@ -265,8 +265,8 @@ ticker symbols while the S&P 500 official list uses dots.
 ## Problem Solution Pipeline
 
 ### Files
-Jupyter Notebook: **`problemsolution.ipynb`** [Here](problem_solution.ipynb)
-Markdown Version **`problemsolution.md`** [Here](problem_solution.md)
+Jupyter Notebook: **`problemsolution.ipynb`** [Here](problemsolution.ipynb)
+Markdown Version **`problemsolution.md`** [Here](problemsolution.md)
 
 ### Analysis Rationale
 
