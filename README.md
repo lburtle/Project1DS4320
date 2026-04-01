@@ -5,6 +5,41 @@
 
 ### Data
 
+Data folder: [OneDrive Link](https://myuva-my.sharepoint.com/:f:/g/personal/xfd3tf_virginia_edu/IgAnw5dHMOZ-RoqYzN135Y2bASnRxuDLPszFfxa-YQXSFms?e=cSlCmL)
+
+Repo Structure
+
+```
+.
+├── LICENSE
+├── README.md
+├── compute_uncertainty.ipynb
+├── images
+│   └── projectERD.PNG
+├── plots
+│   ├── calibration.png
+│   ├── rmse_improvement.png
+│   ├── signal_distribution.png
+│   ├── ticker_AAPL.png
+│   ├── ticker_AMZN.png
+│   ├── ticker_BAC.png
+│   ├── ticker_CVX.png
+│   ├── ticker_GOOG.png
+│   ├── ticker_JNJ.png
+│   ├── ticker_JPM.png
+│   ├── ticker_MSFT.png
+│   ├── ticker_NVDA.png
+│   ├── ticker_UNH.png
+│   ├── ticker_XOM.png
+│   └── uncertainty_landscape.png
+├── problemsolution.ipynb
+├── requirements.txt
+└── scripts
+    ├── data.py
+    ├── model.py
+    └── visualize.py
+```
+
 ### Pipeline
 
 ### Press Release
@@ -98,11 +133,11 @@ ticker symbols while the S&P 500 official list uses dots.
 ### Data:
 | Table | Description | CSV / Parquet |
 |-------|-------------|---------------|
-| `Companies` | One row per ticker — name, sector, industry, market cap, long business summary text | [Companies.parquet](Change_this) |
-| `PriceHistory` | Daily OHLCV records from IPO date to present, one row per (symbol, date) | [PriceHistory.parquet](Change_this) |
-| `Fundamentals` | Long-format financial statement metrics — income, balance sheet, cash flow; annual and quarterly | [Fundamentals.parquet](Change_this) |
+| `Companies` | One row per ticker — name, sector, industry, market cap, long business summary text | [Companies.parquet](https://myuva-my.sharepoint.com/:u:/g/personal/xfd3tf_virginia_edu/IQCuQ9dEts44R4VhcgLinkuIAZXpkMVL0BgzVrCTZotX1uA?e=xaZb2U) |
+| `PriceHistory` | Daily OHLCV records from IPO date to present, one row per (symbol, date) | [PriceHistory.parquet](https://myuva-my.sharepoint.com/:u:/g/personal/xfd3tf_virginia_edu/IQD8aNE7ny28TL_31jIpa4vwASjvEOYxPLPJ7KYFUr8jye8?e=SoXGis) |
+| `Fundamentals` | Long-format financial statement metrics — income, balance sheet, cash flow; annual and quarterly | [Fundamentals.parquet](https://myuva-my.sharepoint.com/:u:/g/personal/xfd3tf_virginia_edu/IQBIhKOMrz1DTrMnYwDNSdiLAX3fMempSR4aTaLRkceAfTc?e=sk1R32) |
 | `TechnicalIndicators` | 20+ engineered features per (symbol, date): SMAs, EMAs, MACD, RSI, Bollinger Bands, ATR, volatility | [TechnicalIndicators.parquet](Change_this) |
-| `StockNews` | Real news headlines from Yahoo Finance RSS: title, publisher, link, publish timestamp | [StockNews.parquet](Change_this) |
+| `StockNews` | Real news headlines from Yahoo Finance RSS: title, publisher, link, publish timestamp | [StockNews.parquet](https://myuva-my.sharepoint.com/:u:/g/personal/xfd3tf_virginia_edu/IQByAJy3UVk-SLZHAgKQI8oWAW6G9aWPSY1RHE42BaxH6mU?e=2Ho8QK) |
 
 
 ### Data Dictionary:
