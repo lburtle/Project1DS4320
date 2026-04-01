@@ -3,3 +3,5 @@
 *.wal
 parquet_exports
 hw8*
+logs
+__pycache__

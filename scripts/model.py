@@ -55,7 +55,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("model.log"),
+        logging.FileHandler("logs/model.log"),
         logging.StreamHandler()
     ]
 )
@@ -768,16 +768,14 @@ def run_pipeline(max_tickers: int | None = None,
     if failed:
         logging.error(f"\n  Failed tickers ({len(failed)}): {failed}")
 
+# ── QUICK TEST: 5 well-known tickers ─────────────────────────────────
+# Uncomment the line you want to run:
 
-if __name__ == "__main__":
-    # ── QUICK TEST: 5 well-known tickers ─────────────────────────────────
-    # Uncomment the line you want to run:
+# Quick proof-of-concept (5 tickers, ~10 minutes)
+# run_pipeline(ticker_list=["AAPL", "MSFT", "NVDA", "AMZN", "GOOG"])
 
-    # Quick proof-of-concept (5 tickers, ~10 minutes)
-    # run_pipeline(ticker_list=["AAPL", "MSFT", "NVDA", "AMZN", "GOOG"])
+# Medium run (50 tickers, ~2 hours)
+# run_pipeline(max_tickers=50)
 
-    # Medium run (50 tickers, ~2 hours)
-    # run_pipeline(max_tickers=50)
-
-    # Full run (all tickers, ~15 hours — overnight)
-    run_pipeline()
+# Full run (all tickers, ~15 hours — overnight)
+# run_pipeline()

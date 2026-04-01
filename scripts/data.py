@@ -22,7 +22,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("data.log"),
+        logging.FileHandler("logs/data.log"),
         logging.StreamHandler()
     ]
 )
@@ -573,10 +573,7 @@ def run_pipeline():
         logging.info(f"\n-- {label}")
         logging.info("\n" + con.execute(sql).df().to_string(index=False))
 
-    db_mb = os.path.getsize(DB_PATH) / 1e6
-    logging.info(f"\n[done] stock_data.db size: {db_mb:.1f} MB")
     con.close()
+    db_mb = os.path.getsize(DB_PATH) / 1e6 if os.path.exists(DB_PATH) else 0.0
+    logging.info(f"\n[done] stock_data.db size: {db_mb:.1f} MB")
 
-
-if __name__ == "__main__":
-    run_pipeline()
